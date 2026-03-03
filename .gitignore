@@ -10,3 +10,5 @@ venv/
 .pytest_cache/
 .ruff_cache/
 *.qir
+.idea/
+.serena/
