@@ -2,7 +2,39 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
+
+# qsharp's logicalCycleTime formula field only accepts a dimensionless number
+# (nanoseconds) or a symbolic expression — unit suffixes like "ns"/"us" are rejected.
+_DURATION_UNITS_NS = {
+    "ns": 1,
+    "us": 1_000,
+    "µs": 1_000,
+    "ms": 1_000_000,
+    "s":  1_000_000_000,
+}
+_DURATION_RE = re.compile(
+    r"^\s*([0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?)\s*(" +
+    "|".join(re.escape(u) for u in _DURATION_UNITS_NS) +
+    r")\s*$"
+)
+
+
+def _parse_cycle_time(value: str) -> str:
+    """Convert a human duration string to a nanosecond number string.
+
+    Accepts "1000 ns", "1 us", "1 µs", "0.5 ms", "1e3 ns", etc.
+    Returns the plain nanosecond string expected by qsharp (e.g. "1000").
+    Passes through values that don't match (e.g. formula expressions).
+    """
+    m = _DURATION_RE.match(value)
+    if m:
+        amount, unit = float(m.group(1)), m.group(2)
+        ns = amount * _DURATION_UNITS_NS[unit]
+        # Return integer string if whole, float string otherwise
+        return str(int(ns)) if ns == int(ns) else str(ns)
+    return value  # formula expression — pass through unchanged
 
 
 def build_params_dict(
@@ -16,11 +48,30 @@ def build_params_dict(
     error_budget_logical: float | None = None,
     error_budget_t_states: float | None = None,
     error_budget_rotations: float | None = None,
+    qubit_model_overrides: dict | None = None,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Build a parameters dict compatible with qsharp.estimate(params=...)."""
+    qubit_params: dict[str, Any] = {"name": qubit_model}
+    if qubit_model_overrides:
+        qubit_params.update(qubit_model_overrides)
+
+    qec_params: dict[str, Any] = {"name": qec_scheme}
+    if qec_crossing_prefactor is not None:
+        qec_params["crossingPrefactor"] = qec_crossing_prefactor
+    if qec_error_correction_threshold is not None:
+        qec_params["errorCorrectionThreshold"] = qec_error_correction_threshold
+    if qec_logical_cycle_time is not None:
+        qec_params["logicalCycleTime"] = _parse_cycle_time(qec_logical_cycle_time)
+    if qec_physical_qubits_per_logical is not None:
+        qec_params["physicalQubitsPerLogicalQubit"] = qec_physical_qubits_per_logical
+
     params: dict[str, Any] = {
-        "qubitParams": {"name": qubit_model},
-        "qecScheme": {"name": qec_scheme},
+        "qubitParams": qubit_params,
+        "qecScheme": qec_params,
         "errorBudget": error_budget,
     }
 

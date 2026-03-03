@@ -12,7 +12,9 @@ from qre_mcp.core.validators import (
     validate_error_budget,
     validate_logical_counts,
     validate_qec_scheme,
+    validate_qec_scheme_params,
     validate_qubit_model,
+    validate_qubit_model_overrides,
     validate_qubit_model_qec_compatibility,
 )
 
@@ -31,6 +33,11 @@ def estimate_resources(
     error_budget_logical: float | None = None,
     error_budget_t_states: float | None = None,
     error_budget_rotations: float | None = None,
+    qubit_model_overrides: dict | None = None,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Estimate the physical quantum resources required to run a quantum algorithm.
 
@@ -49,6 +56,12 @@ def estimate_resources(
     validate_error_budget(error_budget, error_budget_logical, error_budget_t_states, error_budget_rotations)
     if logical_counts is not None:
         validate_logical_counts(logical_counts)
+    if qubit_model_overrides:
+        validate_qubit_model_overrides(qubit_model_overrides)
+    validate_qec_scheme_params(
+        qec_crossing_prefactor, qec_error_correction_threshold,
+        qec_logical_cycle_time, qec_physical_qubits_per_logical,
+    )
 
     params = build_params_dict(
         qubit_model=qubit_model,
@@ -61,6 +74,11 @@ def estimate_resources(
         error_budget_logical=error_budget_logical,
         error_budget_t_states=error_budget_t_states,
         error_budget_rotations=error_budget_rotations,
+        qubit_model_overrides=qubit_model_overrides,
+        qec_crossing_prefactor=qec_crossing_prefactor,
+        qec_error_correction_threshold=qec_error_correction_threshold,
+        qec_logical_cycle_time=qec_logical_cycle_time,
+        qec_physical_qubits_per_logical=qec_physical_qubits_per_logical,
     )
 
     raw = run_estimation(qsharp_code, algorithm_template, logical_counts, params)
@@ -74,6 +92,11 @@ def generate_frontier(
     qubit_model: str = "qubit_gate_ns_e3",
     qec_scheme: str = "surface_code",
     error_budget: float = 0.001,
+    qubit_model_overrides: dict | None = None,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Generate the Pareto frontier showing the qubit-count vs. runtime tradeoff.
 
@@ -89,11 +112,22 @@ def generate_frontier(
     validate_error_budget(error_budget)
     if logical_counts is not None:
         validate_logical_counts(logical_counts)
+    if qubit_model_overrides:
+        validate_qubit_model_overrides(qubit_model_overrides)
+    validate_qec_scheme_params(
+        qec_crossing_prefactor, qec_error_correction_threshold,
+        qec_logical_cycle_time, qec_physical_qubits_per_logical,
+    )
 
     params = build_params_dict(
         qubit_model=qubit_model,
         qec_scheme=qec_scheme,
         error_budget=error_budget,
+        qubit_model_overrides=qubit_model_overrides,
+        qec_crossing_prefactor=qec_crossing_prefactor,
+        qec_error_correction_threshold=qec_error_correction_threshold,
+        qec_logical_cycle_time=qec_logical_cycle_time,
+        qec_physical_qubits_per_logical=qec_physical_qubits_per_logical,
     )
 
     raw = run_frontier_estimation(qsharp_code, algorithm_template, logical_counts, params)

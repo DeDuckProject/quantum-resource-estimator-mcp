@@ -83,6 +83,18 @@ Via an LLM with this MCP server connected:
 | `chemistry_femo` | FeMo-cofactor simulation | Chemistry |
 | `qpe_generic` | Quantum phase estimation | General |
 
+## Logs
+
+The server runs over stdio (MCP protocol), so stdout/stderr are not available for human-readable output. Logs are written to a file you can follow in a separate terminal:
+
+```bash
+tail -F ~/.local/share/qre-mcp/qre-mcp.log
+```
+
+`-F` (capital F) handles log rotation — the file is capped at 5 MB with up to 3 backups.
+
+To use a custom log path, set the `QRE_MCP_LOG` environment variable before starting the server.
+
 ## Running Tests
 
 ```bash

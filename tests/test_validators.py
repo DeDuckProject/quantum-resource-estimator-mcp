@@ -6,14 +6,18 @@ from qre_mcp.core.validators import (
     validate_algorithm_input,
     validate_error_budget,
     validate_logical_counts,
+    validate_qec_scheme_params,
     validate_qubit_model,
+    validate_qubit_model_overrides,
     validate_qubit_model_qec_compatibility,
 )
 from qre_mcp.errors import (
     AlgorithmInputError,
     IncompatibleQECSchemeError,
     InvalidErrorBudgetError,
+    InvalidQECSchemeParamError,
     InvalidQubitModelError,
+    InvalidQubitParamOverrideError,
 )
 
 
@@ -84,3 +88,62 @@ def test_validate_logical_counts_missing_num_qubits():
 def test_validate_logical_counts_zero_qubits():
     with pytest.raises(AlgorithmInputError, match="positive integer"):
         validate_logical_counts({"numQubits": 0})
+
+
+# --- validate_qubit_model_overrides ---
+
+def test_validate_qubit_model_overrides_unknown_key():
+    with pytest.raises(InvalidQubitParamOverrideError, match="Unknown qubit parameter override key"):
+        validate_qubit_model_overrides({"twoQubitGateTimee": "10 ns"})
+
+
+def test_validate_qubit_model_overrides_valid_keys():
+    # Should not raise
+    validate_qubit_model_overrides({
+        "twoQubitGateTime": "10 ns",
+        "oneQubitGateErrorRate": 1e-4,
+    })
+
+
+def test_validate_qubit_model_overrides_all_valid_keys():
+    validate_qubit_model_overrides({
+        "oneQubitGateTime": "50 ns",
+        "twoQubitGateTime": "50 ns",
+        "oneQubitMeasurementTime": "100 ns",
+        "oneQubitGateErrorRate": 1e-3,
+        "twoQubitGateErrorRate": 1e-3,
+        "tGateErrorRate": 5e-4,
+        "readoutErrorRate": 1e-3,
+        "idleErrorRate": 1e-4,
+    })
+
+
+# --- validate_qec_scheme_params ---
+
+def test_validate_qec_scheme_params_negative_crossing_prefactor():
+    with pytest.raises(InvalidQECSchemeParamError, match="qec_crossing_prefactor must be > 0"):
+        validate_qec_scheme_params(-0.1, None, None, None)
+
+
+def test_validate_qec_scheme_params_zero_crossing_prefactor():
+    with pytest.raises(InvalidQECSchemeParamError, match="qec_crossing_prefactor must be > 0"):
+        validate_qec_scheme_params(0.0, None, None, None)
+
+
+def test_validate_qec_scheme_params_threshold_out_of_range():
+    with pytest.raises(InvalidQECSchemeParamError, match="qec_error_correction_threshold"):
+        validate_qec_scheme_params(None, 0.0, None, None)
+    with pytest.raises(InvalidQECSchemeParamError, match="qec_error_correction_threshold"):
+        validate_qec_scheme_params(None, 1.0, None, None)
+    with pytest.raises(InvalidQECSchemeParamError, match="qec_error_correction_threshold"):
+        validate_qec_scheme_params(None, 1.5, None, None)
+
+
+def test_validate_qec_scheme_params_all_none():
+    # Should not raise
+    validate_qec_scheme_params(None, None, None, None)
+
+
+def test_validate_qec_scheme_params_valid_values():
+    # Should not raise
+    validate_qec_scheme_params(0.03, 0.01, "1000 ns", "2 * codeDistance * codeDistance")

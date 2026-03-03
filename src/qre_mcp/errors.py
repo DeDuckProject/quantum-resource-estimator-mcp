@@ -31,3 +31,11 @@ class NoFeasibleSolutionError(QREError):
 
 class UnknownAlgorithmTemplateError(QREError):
     """Raised when a named algorithm template does not exist."""
+
+
+class InvalidQubitParamOverrideError(QREError):
+    """Raised when qubit_model_overrides contains unknown parameter keys."""
+
+
+class InvalidQECSchemeParamError(QREError):
+    """Raised when custom QEC scheme parameters are out of range."""

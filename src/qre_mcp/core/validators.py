@@ -11,7 +11,9 @@ from qre_mcp.errors import (
     AlgorithmInputError,
     IncompatibleQECSchemeError,
     InvalidErrorBudgetError,
+    InvalidQECSchemeParamError,
     InvalidQubitModelError,
+    InvalidQubitParamOverrideError,
 )
 
 
@@ -79,6 +81,44 @@ def validate_algorithm_input(
         raise AlgorithmInputError(
             "Multiple algorithm inputs provided. Supply exactly one of: "
             "'qsharp_code', 'algorithm_template', or 'logical_counts'."
+        )
+
+
+_VALID_QUBIT_OVERRIDE_KEYS = frozenset({
+    "oneQubitGateTime",
+    "twoQubitGateTime",
+    "oneQubitMeasurementTime",
+    "oneQubitGateErrorRate",
+    "twoQubitGateErrorRate",
+    "tGateErrorRate",
+    "readoutErrorRate",
+    "idleErrorRate",
+})
+
+
+def validate_qubit_model_overrides(overrides: dict) -> None:
+    unknown = set(overrides) - _VALID_QUBIT_OVERRIDE_KEYS
+    if unknown:
+        valid = ", ".join(sorted(_VALID_QUBIT_OVERRIDE_KEYS))
+        raise InvalidQubitParamOverrideError(
+            f"Unknown qubit parameter override key(s): {', '.join(sorted(unknown))}. "
+            f"Valid keys: {valid}."
+        )
+
+
+def validate_qec_scheme_params(
+    crossing_prefactor: float | None,
+    error_threshold: float | None,
+    cycle_time: str | None,
+    qubits_per_logical: str | None,
+) -> None:
+    if crossing_prefactor is not None and crossing_prefactor <= 0:
+        raise InvalidQECSchemeParamError(
+            f"qec_crossing_prefactor must be > 0, got {crossing_prefactor}."
+        )
+    if error_threshold is not None and not (0.0 < error_threshold < 1.0):
+        raise InvalidQECSchemeParamError(
+            f"qec_error_correction_threshold must be in (0, 1), got {error_threshold}."
         )
 
 

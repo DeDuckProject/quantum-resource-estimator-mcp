@@ -11,6 +11,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from qre_mcp._log import logger, setup_logging
 from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES
 from qre_mcp.data.qec_schemes import QEC_SCHEMES
 from qre_mcp.data.qubit_models import QUBIT_MODELS
@@ -59,6 +60,11 @@ def estimate_resources(
     error_budget_logical: float | None = None,
     error_budget_t_states: float | None = None,
     error_budget_rotations: float | None = None,
+    qubit_model_overrides: str | None = None,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Estimate the physical quantum resources needed to run a quantum algorithm.
 
@@ -75,6 +81,17 @@ def estimate_resources(
     - qec_scheme: Error correction scheme. 'surface_code' (default) or 'floquet_code'
       (Majorana qubits only).
     - error_budget: Acceptable failure probability (0-1). Default 0.001.
+    - qubit_model_overrides: JSON string to override specific qubit parameters while keeping
+      a named model as the base. E.g. '{"twoQubitGateTime": "10 ns"}'. Valid keys:
+      oneQubitGateTime, twoQubitGateTime, oneQubitMeasurementTime, oneQubitGateErrorRate,
+      twoQubitGateErrorRate, tGateErrorRate, readoutErrorRate, idleErrorRate.
+
+    Optional QEC scheme overrides (override individual parameters of the named qec_scheme):
+    - qec_crossing_prefactor: float > 0. Error-suppression prefactor (default ~0.03).
+    - qec_error_correction_threshold: float in (0,1). Error correction threshold (default ~0.01).
+    - qec_logical_cycle_time: Formula string for logical cycle duration, e.g. '1000 ns' for
+      a fixed 1 µs cycle (replicates Gidney-Ekerå assumption).
+    - qec_physical_qubits_per_logical: Formula string for qubits per logical qubit.
 
     Optional constraints (use at most one of max_duration or max_physical_qubits):
     - max_duration: e.g. '1 hour', '500 ms', '1 s'
@@ -85,7 +102,14 @@ def estimate_resources(
     Returns: summary (physical_qubits, runtime, logical_qubits, code_distance, t_factory_copies)
     plus full details breakdown.
     """
+    logger.info(
+        "estimate_resources: template=%r model=%r qec=%r budget=%s overrides=%r "
+        "cycle_time=%r max_duration=%r max_qubits=%r",
+        algorithm_template, qubit_model, qec_scheme, error_budget,
+        qubit_model_overrides, qec_logical_cycle_time, max_duration, max_physical_qubits,
+    )
     counts_dict = json.loads(logical_counts) if logical_counts else None
+    overrides_dict = json.loads(qubit_model_overrides) if qubit_model_overrides else None
     return _estimate_resources(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,
@@ -100,6 +124,11 @@ def estimate_resources(
         error_budget_logical=error_budget_logical,
         error_budget_t_states=error_budget_t_states,
         error_budget_rotations=error_budget_rotations,
+        qubit_model_overrides=overrides_dict,
+        qec_crossing_prefactor=qec_crossing_prefactor,
+        qec_error_correction_threshold=qec_error_correction_threshold,
+        qec_logical_cycle_time=qec_logical_cycle_time,
+        qec_physical_qubits_per_logical=qec_physical_qubits_per_logical,
     )
 
 
@@ -121,13 +150,22 @@ def compare_configurations(
     Hardware selection (choose one approach):
     - compare_all_models=True: compare all compatible qubit models
     - qubit_models=['qubit_gate_ns_e3', 'qubit_gate_us_e3']: compare specific models
-    - configurations: JSON string of full configs, e.g.:
-      '[{"qubit_model": "qubit_gate_ns_e3", "qec_scheme": "surface_code", "error_budget": 0.001}]'
+    - configurations: JSON string of full configs. Each config dict may include the standard
+      qubit_model/qec_scheme/error_budget keys plus the new override keys:
+      qubit_model_overrides (dict), qec_crossing_prefactor, qec_error_correction_threshold,
+      qec_logical_cycle_time, qec_physical_qubits_per_logical. E.g.:
+      '[{"qubit_model": "qubit_gate_ns_e3", "qec_logical_cycle_time": "1000 ns"}]'
     - Default (none specified): compare all 4 gate-based models
 
     Returns a side-by-side comparison table showing physical qubits, runtime, code distance,
     and T-factory copies for each configuration.
     """
+    logger.info(
+        "compare_configurations: template=%r model=%r qec=%r budget=%s "
+        "compare_all=%s qubit_models=%r",
+        algorithm_template, qec_scheme, qec_scheme, error_budget,
+        compare_all_models, qubit_models,
+    )
     counts_dict = json.loads(logical_counts) if logical_counts else None
     configs_list = json.loads(configurations) if configurations else None
     return _compare_configurations(
@@ -150,6 +188,11 @@ def generate_frontier(
     qubit_model: str = "qubit_gate_ns_e3",
     qec_scheme: str = "surface_code",
     error_budget: float = 0.001,
+    qubit_model_overrides: str | None = None,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Generate the Pareto frontier: qubit-count vs. runtime tradeoff for an algorithm.
 
@@ -160,9 +203,20 @@ def generate_frontier(
     - First point: minimum qubit count (longest runtime)
     - Last point: minimum runtime (most qubits)
 
+    Optional qubit/QEC overrides (same as estimate_resources):
+    - qubit_model_overrides: JSON string to override specific qubit parameters.
+    - qec_crossing_prefactor, qec_error_correction_threshold: float overrides.
+    - qec_logical_cycle_time, qec_physical_qubits_per_logical: formula string overrides.
+
     Useful for understanding hardware requirements at different time budgets.
     """
+    logger.info(
+        "generate_frontier: template=%r model=%r qec=%r budget=%s overrides=%r cycle_time=%r",
+        algorithm_template, qubit_model, qec_scheme, error_budget,
+        qubit_model_overrides, qec_logical_cycle_time,
+    )
     counts_dict = json.loads(logical_counts) if logical_counts else None
+    overrides_dict = json.loads(qubit_model_overrides) if qubit_model_overrides else None
     return _generate_frontier(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,
@@ -170,6 +224,11 @@ def generate_frontier(
         qubit_model=qubit_model,
         qec_scheme=qec_scheme,
         error_budget=error_budget,
+        qubit_model_overrides=overrides_dict,
+        qec_crossing_prefactor=qec_crossing_prefactor,
+        qec_error_correction_threshold=qec_error_correction_threshold,
+        qec_logical_cycle_time=qec_logical_cycle_time,
+        qec_physical_qubits_per_logical=qec_physical_qubits_per_logical,
     )
 
 
@@ -404,6 +463,7 @@ Use the Quantum Resource Estimator MCP server to perform a structured analysis.
 
 
 def main() -> None:
+    setup_logging()
     mcp.run(transport="stdio")
 
 

@@ -12,7 +12,9 @@ from qre_mcp.core.validators import (
     validate_error_budget,
     validate_logical_counts,
     validate_qec_scheme,
+    validate_qec_scheme_params,
     validate_qubit_model,
+    validate_qubit_model_overrides,
     validate_qubit_model_qec_compatibility,
 )
 
@@ -52,6 +54,14 @@ def compare_configurations(
             validate_qubit_model_qec_compatibility(
                 cfg.get("qubit_model", "qubit_gate_ns_e3"),
                 cfg.get("qec_scheme", "surface_code"),
+            )
+            if cfg.get("qubit_model_overrides"):
+                validate_qubit_model_overrides(cfg["qubit_model_overrides"])
+            validate_qec_scheme_params(
+                cfg.get("qec_crossing_prefactor"),
+                cfg.get("qec_error_correction_threshold"),
+                cfg.get("qec_logical_cycle_time"),
+                cfg.get("qec_physical_qubits_per_logical"),
             )
         params_list = build_params_list(configurations)
         config_labels = configurations

@@ -11,6 +11,7 @@ from qre_mcp.core.validators import (
     validate_algorithm_input,
     validate_error_budget,
     validate_logical_counts,
+    validate_qec_scheme_params,
 )
 from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES
 from qre_mcp.data.qec_schemes import QEC_SCHEMES
@@ -167,6 +168,10 @@ def custom_qubit_model_estimate(
     idle_error_rate: float = 1e-4,
     qec_scheme: str = "surface_code",
     error_budget: float = 0.001,
+    qec_crossing_prefactor: float | None = None,
+    qec_error_correction_threshold: float | None = None,
+    qec_logical_cycle_time: str | None = None,
+    qec_physical_qubits_per_logical: str | None = None,
 ) -> dict[str, Any]:
     """Estimate resources using fully custom physical qubit parameters.
 
@@ -178,6 +183,10 @@ def custom_qubit_model_estimate(
     validate_error_budget(error_budget)
     if logical_counts is not None:
         validate_logical_counts(logical_counts)
+    validate_qec_scheme_params(
+        qec_crossing_prefactor, qec_error_correction_threshold,
+        qec_logical_cycle_time, qec_physical_qubits_per_logical,
+    )
 
     custom_qubit_params = {
         "instructionSet": instruction_set,
@@ -191,9 +200,19 @@ def custom_qubit_model_estimate(
         "idleErrorRate": idle_error_rate,
     }
 
+    qec_params: dict[str, Any] = {"name": qec_scheme}
+    if qec_crossing_prefactor is not None:
+        qec_params["crossingPrefactor"] = qec_crossing_prefactor
+    if qec_error_correction_threshold is not None:
+        qec_params["errorCorrectionThreshold"] = qec_error_correction_threshold
+    if qec_logical_cycle_time is not None:
+        qec_params["logicalCycleTime"] = qec_logical_cycle_time
+    if qec_physical_qubits_per_logical is not None:
+        qec_params["physicalQubitsPerLogicalQubit"] = qec_physical_qubits_per_logical
+
     params: dict[str, Any] = {
         "qubitParams": custom_qubit_params,
-        "qecScheme": {"name": qec_scheme},
+        "qecScheme": qec_params,
         "errorBudget": error_budget,
     }
 
@@ -247,5 +266,30 @@ def _parameter_reference() -> dict[str, Any]:
             "error_budget_logical": "Budget for logical errors (default: 1/3 of total).",
             "error_budget_t_states": "Budget for T-state distillation errors (default: 1/3 of total).",
             "error_budget_rotations": "Budget for rotation synthesis errors (default: 1/3 of total).",
+        },
+        "qubit_model_overrides": (
+            "JSON string. Start from a named qubit_model and override specific parameters. "
+            "E.g. '{\"twoQubitGateTime\": \"10 ns\"}' to keep qubit_gate_ns_e3 but change gate time. "
+            "Valid keys: oneQubitGateTime, twoQubitGateTime, oneQubitMeasurementTime, "
+            "oneQubitGateErrorRate, twoQubitGateErrorRate, tGateErrorRate, readoutErrorRate, idleErrorRate."
+        ),
+        "custom_qec_scheme": {
+            "qec_crossing_prefactor": (
+                "float > 0. Overrides the error-suppression prefactor "
+                "(default ~0.03 for surface code)."
+            ),
+            "qec_error_correction_threshold": (
+                "float in (0,1). Overrides the error correction threshold (default ~0.01)."
+            ),
+            "qec_logical_cycle_time": (
+                "Formula string for one logical cycle duration. Variables: twoQubitGateTime, "
+                "oneQubitMeasurementTime, codeDistance. "
+                "E.g. '(4 * twoQubitGateTime + 2 * oneQubitMeasurementTime) * codeDistance'. "
+                "Use '1000 ns' (a constant) to fix cycle time to 1 µs regardless of code distance."
+            ),
+            "qec_physical_qubits_per_logical": (
+                "Formula string for physical qubits per logical qubit. Variable: codeDistance. "
+                "E.g. '2 * codeDistance * codeDistance' (surface code default)."
+            ),
         },
     }
