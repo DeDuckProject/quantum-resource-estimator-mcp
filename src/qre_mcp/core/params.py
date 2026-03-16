@@ -37,6 +37,23 @@ def _parse_cycle_time(value: str) -> str:
     return value  # formula expression — pass through unchanged
 
 
+def parse_duration_ns(value: str) -> float:
+    """Parse a human duration string and return the value in nanoseconds.
+
+    Accepts "1000 ns", "10 us", "10 µs", "0.5 ms", "1e3 ns", etc.
+    Raises ValueError if the format is not recognised.
+    """
+    m = _DURATION_RE.match(value)
+    if not m:
+        raise ValueError(
+            f"Invalid duration format: '{value}'. "
+            "Expected a number followed by a unit (ns, us, µs, ms, s). "
+            "Examples: '10 us', '1000 ns', '0.5 ms'."
+        )
+    amount, unit = float(m.group(1)), m.group(2)
+    return amount * _DURATION_UNITS_NS[unit]
+
+
 def build_params_dict(
     qubit_model: str = "qubit_gate_ns_e3",
     qec_scheme: str = "surface_code",

@@ -16,6 +16,7 @@ from qre_mcp.core.validators import (
     validate_qubit_model,
     validate_qubit_model_overrides,
     validate_qubit_model_qec_compatibility,
+    validate_reaction_time,
 )
 
 
@@ -38,6 +39,7 @@ def estimate_resources(
     qec_error_correction_threshold: float | None = None,
     qec_logical_cycle_time: str | None = None,
     qec_physical_qubits_per_logical: str | None = None,
+    reaction_time: str | None = None,
 ) -> dict[str, Any]:
     """Estimate the physical quantum resources required to run a quantum algorithm.
 
@@ -45,6 +47,10 @@ def estimate_resources(
     - qsharp_code: Q# source code string with a parameterless entry point operation
     - algorithm_template: ID of a predefined template (e.g. 'shor_2048', 'grover_aes128')
     - logical_counts: dict with keys numQubits, tCount, rotationCount, cczCount, etc.
+
+    Optional reaction_time (e.g. '10 us') models classical control system latency.
+    When reaction_time exceeds the logical cycle time, it dominates the effective
+    cycle time and the adjusted runtime is added to the summary.
 
     Returns a summary (physical qubits, runtime, logical qubits, code distance, T factories)
     plus a full details breakdown.
@@ -62,6 +68,10 @@ def estimate_resources(
         qec_crossing_prefactor, qec_error_correction_threshold,
         qec_logical_cycle_time, qec_physical_qubits_per_logical,
     )
+
+    reaction_time_ns: float | None = None
+    if reaction_time is not None:
+        reaction_time_ns = validate_reaction_time(reaction_time)
 
     params = build_params_dict(
         qubit_model=qubit_model,
@@ -82,7 +92,7 @@ def estimate_resources(
     )
 
     raw = run_estimation(qsharp_code, algorithm_template, logical_counts, params)
-    return format_single_result(raw)
+    return format_single_result(raw, reaction_time_ns=reaction_time_ns)
 
 
 def generate_frontier(

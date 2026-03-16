@@ -39,3 +39,7 @@ class InvalidQubitParamOverrideError(QREError):
 
 class InvalidQECSchemeParamError(QREError):
     """Raised when custom QEC scheme parameters are out of range."""
+
+
+class InvalidReactionTimeError(QREError):
+    """Raised when the reaction_time parameter is invalid (bad format, zero, or negative)."""
