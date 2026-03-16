@@ -25,7 +25,7 @@ Estimates physical quantum resources (qubit count, runtime) needed to run quantu
 
 ## Installation
 
-Requires Python 3.10+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and the [.NET SDK](https://dotnet.microsoft.com/download) (required by the `qsharp` package).
+Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/). The `qsharp` package bundles its own native runtime — no .NET SDK install needed.
 
 ```bash
 git clone https://github.com/DeDuckProject/quantum-resource-estimator-mcp
