@@ -25,7 +25,13 @@ Estimates physical quantum resources (qubit count, runtime) needed to run quantu
 
 ## Installation
 
-Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/). The `qsharp` package bundles its own native runtime — no .NET SDK install needed.
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/). The `qsharp` package bundles its own native runtime — no .NET SDK install needed.
+
+### Via PyPI (recommended)
+
+No cloning needed. Configure your MCP client directly (see below) — `uvx` handles installation automatically on first run.
+
+### From source
 
 ```bash
 git clone https://github.com/DeDuckProject/quantum-resource-estimator-mcp
@@ -35,14 +41,7 @@ uv sync
 
 ## Usage
 
-### Run the server
-```bash
-uv run qre-mcp
-```
-
 ### Configure in Claude Desktop
-
-The recommended approach uses `uv run --directory` so no manual venv activation is needed.
 
 **macOS** — `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows** — `%APPDATA%\Claude\claude_desktop_config.json`
@@ -52,11 +51,10 @@ The recommended approach uses `uv run --directory` so no manual venv activation 
 {
   "mcpServers": {
     "quantum-resource-estimator": {
-      "command": "/path/to/uv",
+      "command": "/path/to/uvx",
       "args": [
-        "run",
-        "--directory",
-        "/path/to/quantum-resource-estimator-mcp",
+        "--from",
+        "quantum-resource-estimator-mcp",
         "qre-mcp"
       ]
     }
@@ -64,9 +62,17 @@ The recommended approach uses `uv run --directory` so no manual venv activation 
 }
 ```
 
-Replace `/path/to/uv` with the output of `which uv` and `/path/to/quantum-resource-estimator-mcp` with the absolute path to the cloned repo.
+Replace `/path/to/uvx` with the output of `which uvx`.
 
 ### Configure in Claude Code
+
+```bash
+claude mcp add quantum-resource-estimator -- /path/to/uvx --from quantum-resource-estimator-mcp qre-mcp
+```
+
+Replace `/path/to/uvx` with the output of `which uvx`.
+
+### From source (development)
 
 ```bash
 claude mcp add quantum-resource-estimator -- /path/to/uv run --directory /path/to/quantum-resource-estimator-mcp qre-mcp
