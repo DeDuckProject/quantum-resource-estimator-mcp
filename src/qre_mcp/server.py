@@ -9,6 +9,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
+
+def _parse_json(value: str, field_name: str) -> Any:
+    """Parse a JSON string, raising ValueError with a clear message on failure."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON for '{field_name}': {e}") from e
+
 from mcp.server.fastmcp import FastMCP
 
 from qre_mcp._log import logger, setup_logging
@@ -108,8 +116,8 @@ def estimate_resources(
         algorithm_template, qubit_model, qec_scheme, error_budget,
         qubit_model_overrides, qec_logical_cycle_time, max_duration, max_physical_qubits,
     )
-    counts_dict = json.loads(logical_counts) if logical_counts else None
-    overrides_dict = json.loads(qubit_model_overrides) if qubit_model_overrides else None
+    counts_dict = _parse_json(logical_counts, "logical_counts") if logical_counts else None
+    overrides_dict = _parse_json(qubit_model_overrides, "qubit_model_overrides") if qubit_model_overrides else None
     return _estimate_resources(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,
@@ -166,8 +174,8 @@ def compare_configurations(
         algorithm_template, qec_scheme, qec_scheme, error_budget,
         compare_all_models, qubit_models,
     )
-    counts_dict = json.loads(logical_counts) if logical_counts else None
-    configs_list = json.loads(configurations) if configurations else None
+    counts_dict = _parse_json(logical_counts, "logical_counts") if logical_counts else None
+    configs_list = _parse_json(configurations, "configurations") if configurations else None
     return _compare_configurations(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,
@@ -215,8 +223,8 @@ def generate_frontier(
         algorithm_template, qubit_model, qec_scheme, error_budget,
         qubit_model_overrides, qec_logical_cycle_time,
     )
-    counts_dict = json.loads(logical_counts) if logical_counts else None
-    overrides_dict = json.loads(qubit_model_overrides) if qubit_model_overrides else None
+    counts_dict = _parse_json(logical_counts, "logical_counts") if logical_counts else None
+    overrides_dict = _parse_json(qubit_model_overrides, "qubit_model_overrides") if qubit_model_overrides else None
     return _generate_frontier(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,
@@ -314,7 +322,7 @@ def custom_qubit_model_estimate(
 
     Provide algorithm as exactly one of algorithm_template, logical_counts, or qsharp_code.
     """
-    counts_dict = json.loads(logical_counts) if logical_counts else None
+    counts_dict = _parse_json(logical_counts, "logical_counts") if logical_counts else None
     return _custom_qubit_model_estimate(
         qsharp_code=qsharp_code,
         algorithm_template=algorithm_template,

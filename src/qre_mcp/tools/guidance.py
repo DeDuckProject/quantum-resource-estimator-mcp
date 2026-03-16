@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from qre_mcp.core.estimator import run_estimation
-from qre_mcp.core.params import build_params_dict
+from qre_mcp.core.params import _parse_cycle_time, build_params_dict
 from qre_mcp.core.result_formatter import format_single_result
 from qre_mcp.core.validators import (
     validate_algorithm_input,
@@ -206,7 +206,7 @@ def custom_qubit_model_estimate(
     if qec_error_correction_threshold is not None:
         qec_params["errorCorrectionThreshold"] = qec_error_correction_threshold
     if qec_logical_cycle_time is not None:
-        qec_params["logicalCycleTime"] = qec_logical_cycle_time
+        qec_params["logicalCycleTime"] = _parse_cycle_time(qec_logical_cycle_time)
     if qec_physical_qubits_per_logical is not None:
         qec_params["physicalQubitsPerLogicalQubit"] = qec_physical_qubits_per_logical
 
