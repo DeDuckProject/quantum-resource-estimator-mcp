@@ -25,35 +25,56 @@ Estimates physical quantum resources (qubit count, runtime) needed to run quantu
 
 ## Installation
 
-```bash
-pip install -e ".[dev]"
-```
+Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/). The `qsharp` package bundles its own native runtime — no .NET SDK install needed.
 
-Requires Python 3.10+ and the `qsharp` package (installed automatically).
+```bash
+git clone https://github.com/DeDuckProject/quantum-resource-estimator-mcp
+cd quantum-resource-estimator-mcp
+uv sync
+```
 
 ## Usage
 
 ### Run the server
 ```bash
-qre-mcp
+uv run qre-mcp
 ```
 
 ### Configure in Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+The recommended approach uses `uv run --directory` so no manual venv activation is needed.
+
+**macOS** — `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows** — `%APPDATA%\Claude\claude_desktop_config.json`
+**Linux** — `~/.config/Claude/claude_desktop_config.json`
+
 ```json
 {
   "mcpServers": {
     "quantum-resource-estimator": {
-      "command": "qre-mcp"
+      "command": "/path/to/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/path/to/quantum-resource-estimator-mcp",
+        "qre-mcp"
+      ]
     }
   }
 }
 ```
 
+Replace `/path/to/uv` with the output of `which uv` and `/path/to/quantum-resource-estimator-mcp` with the absolute path to the cloned repo.
+
+### Configure in Claude Code
+
+```bash
+claude mcp add quantum-resource-estimator -- /path/to/uv run --directory /path/to/quantum-resource-estimator-mcp qre-mcp
+```
+
 ### Inspect with MCP dev tools
 ```bash
-mcp dev src/qre_mcp/server.py
+uv run mcp dev src/qre_mcp/server.py
 ```
 
 ## Algorithm Input Methods
@@ -98,7 +119,7 @@ To use a custom log path, set the `QRE_MCP_LOG` environment variable before star
 ## Running Tests
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Tests cover validators, result formatting, reference data, and parameter building. Integration tests (requiring `qsharp`) are skipped if the package is not available.
