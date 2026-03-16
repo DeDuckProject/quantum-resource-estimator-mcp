@@ -101,6 +101,10 @@ Via an LLM with this MCP server connected:
 
 > "I have a circuit with 500 logical qubits and 10 million T gates — how many physical qubits do I need?"
 
+## Example Output
+
+![Example output showing a cross-architecture comparison of Shor's algorithm across all 6 hardware models](docs/example_output.png)
+
 ## Predefined Algorithm Templates
 
 | ID | Algorithm | Category |
