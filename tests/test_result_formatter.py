@@ -50,3 +50,75 @@ def test_format_frontier_results_single(mock_estimation_result):
     frontier = format_frontier_results(mock_estimation_result)
     assert "frontier" in frontier
     assert len(frontier["frontier"]) == 1
+
+
+# --- Reaction-time adjustment tests ---
+
+
+def test_reaction_time_limited(mock_estimation_result):
+    """reaction_time > cycle_time => reaction_limited=True, adjusted runtime."""
+    # Mock has logicalCycleTime="900 ns", algorithmicLogicalDepth=1_000_000
+    # reaction_time = 10_000 ns (10 us) > 900 ns => reaction limited
+    result = format_single_result(mock_estimation_result, reaction_time_ns=10_000.0)
+    summary = result["summary"]
+    assert summary["reaction_limited"] is True
+    assert summary["reaction_time_adjusted_runtime"] is not None
+    assert "reaction_time_note" in summary
+    # effective_cycle = max(900, 10000) = 10000 ns
+    # adjusted = 1_000_000 * 10_000 = 10_000_000_000 ns = 10 seconds
+    assert "secs" in summary["reaction_time_adjusted_runtime"]
+
+
+def test_reaction_time_not_limiting(mock_estimation_result):
+    """reaction_time < cycle_time => reaction_limited=False."""
+    # reaction_time = 500 ns < 900 ns => not limiting
+    result = format_single_result(mock_estimation_result, reaction_time_ns=500.0)
+    summary = result["summary"]
+    assert summary["reaction_limited"] is False
+    assert summary["reaction_time_adjusted_runtime"] is not None
+
+
+def test_no_reaction_time(mock_estimation_result):
+    """No reaction_time => no adjustment keys in summary."""
+    result = format_single_result(mock_estimation_result)
+    summary = result["summary"]
+    assert "reaction_limited" not in summary
+    assert "reaction_time_adjusted_runtime" not in summary
+    assert "reaction_time_note" not in summary
+
+
+def test_reaction_time_missing_depth():
+    """Missing algorithmicLogicalDepth => graceful None + note."""
+    raw = {
+        "physicalCounts": {"physicalQubits": 100, "breakdown": {}},
+        "physicalCountsFormatted": {},
+        "logicalQubit": {"logicalCycleTime": "900 ns"},
+        "tfactory": {},
+        "logicalCounts": {},
+        "jobParams": {},
+    }
+    result = format_single_result(raw, reaction_time_ns=10_000.0)
+    summary = result["summary"]
+    assert summary["reaction_limited"] is None
+    assert summary["reaction_time_adjusted_runtime"] is None
+    assert "not found" in summary["reaction_time_note"]
+
+
+def test_reaction_time_missing_cycle_time():
+    """Missing logicalCycleTime => graceful None + note."""
+    raw = {
+        "physicalCounts": {
+            "physicalQubits": 100,
+            "breakdown": {"algorithmicLogicalDepth": 1000},
+        },
+        "physicalCountsFormatted": {},
+        "logicalQubit": {},
+        "tfactory": {},
+        "logicalCounts": {},
+        "jobParams": {},
+    }
+    result = format_single_result(raw, reaction_time_ns=10_000.0)
+    summary = result["summary"]
+    assert summary["reaction_limited"] is None
+    assert summary["reaction_time_adjusted_runtime"] is None
+    assert "not found" in summary["reaction_time_note"]

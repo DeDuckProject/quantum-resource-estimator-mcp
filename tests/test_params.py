@@ -121,7 +121,7 @@ def test_build_params_list_mixed_configs():
 
 # --- _parse_cycle_time ---
 
-from qre_mcp.core.params import _parse_cycle_time
+from qre_mcp.core.params import _parse_cycle_time, parse_duration_ns
 
 
 def test_parse_cycle_time_ns():
@@ -159,3 +159,39 @@ def test_build_params_dict_cycle_time_ns_converted():
 def test_build_params_dict_cycle_time_us_converted():
     params = build_params_dict(qec_logical_cycle_time="1 us")
     assert params["qecScheme"]["logicalCycleTime"] == "1000"
+
+
+# --- parse_duration_ns ---
+
+
+def test_parse_duration_ns_ns():
+    assert parse_duration_ns("1000 ns") == 1000.0
+
+
+def test_parse_duration_ns_us():
+    assert parse_duration_ns("10 us") == 10_000.0
+    assert parse_duration_ns("10 µs") == 10_000.0
+
+
+def test_parse_duration_ns_ms():
+    assert parse_duration_ns("0.5 ms") == 500_000.0
+
+
+def test_parse_duration_ns_s():
+    assert parse_duration_ns("1 s") == 1_000_000_000.0
+
+
+def test_parse_duration_ns_scientific():
+    assert parse_duration_ns("1e3 ns") == 1000.0
+
+
+def test_parse_duration_ns_invalid_format():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid duration format"):
+        parse_duration_ns("not a duration")
+
+
+def test_parse_duration_ns_formula_raises():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid duration format"):
+        parse_duration_ns("4 * oneQubitMeasurementTime")

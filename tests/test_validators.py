@@ -10,6 +10,7 @@ from qre_mcp.core.validators import (
     validate_qubit_model,
     validate_qubit_model_overrides,
     validate_qubit_model_qec_compatibility,
+    validate_reaction_time,
 )
 from qre_mcp.errors import (
     AlgorithmInputError,
@@ -18,6 +19,7 @@ from qre_mcp.errors import (
     InvalidQECSchemeParamError,
     InvalidQubitModelError,
     InvalidQubitParamOverrideError,
+    InvalidReactionTimeError,
 )
 
 
@@ -147,3 +149,30 @@ def test_validate_qec_scheme_params_all_none():
 def test_validate_qec_scheme_params_valid_values():
     # Should not raise
     validate_qec_scheme_params(0.03, 0.01, "1000 ns", "2 * codeDistance * codeDistance")
+
+
+# --- validate_reaction_time ---
+
+def test_validate_reaction_time_valid():
+    ns = validate_reaction_time("10 us")
+    assert ns == 10_000.0
+
+
+def test_validate_reaction_time_valid_ns():
+    ns = validate_reaction_time("500 ns")
+    assert ns == 500.0
+
+
+def test_validate_reaction_time_invalid_format():
+    with pytest.raises(InvalidReactionTimeError, match="Invalid duration format"):
+        validate_reaction_time("not valid")
+
+
+def test_validate_reaction_time_zero():
+    with pytest.raises(InvalidReactionTimeError, match="must be positive"):
+        validate_reaction_time("0 ns")
+
+
+def test_validate_reaction_time_negative():
+    with pytest.raises(InvalidReactionTimeError, match="Invalid duration format"):
+        validate_reaction_time("-10 us")

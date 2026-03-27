@@ -73,6 +73,7 @@ def estimate_resources(
     qec_error_correction_threshold: float | None = None,
     qec_logical_cycle_time: str | None = None,
     qec_physical_qubits_per_logical: str | None = None,
+    reaction_time: str | None = None,
 ) -> dict[str, Any]:
     """Estimate the physical quantum resources needed to run a quantum algorithm.
 
@@ -107,14 +108,21 @@ def estimate_resources(
     - max_t_factories: limit T-factory copies (reduces qubits, increases runtime)
     - logical_depth_factor: multiplier on circuit depth (default 1.0)
 
+    Reaction time (post-processing adjustment):
+    - reaction_time: Classical control system latency, e.g. '10 us'. When this exceeds
+      the QEC logical cycle time, it becomes the effective cycle time, increasing overall
+      runtime. Models the Gidney-Ekeraa scenario where classical decoding latency dominates.
+      Only affects runtime — physical qubit count and code distance are unchanged.
+
     Returns: summary (physical_qubits, runtime, logical_qubits, code_distance, t_factory_copies)
     plus full details breakdown.
     """
     logger.info(
         "estimate_resources: template=%r model=%r qec=%r budget=%s overrides=%r "
-        "cycle_time=%r max_duration=%r max_qubits=%r",
+        "cycle_time=%r max_duration=%r max_qubits=%r reaction_time=%r",
         algorithm_template, qubit_model, qec_scheme, error_budget,
         qubit_model_overrides, qec_logical_cycle_time, max_duration, max_physical_qubits,
+        reaction_time,
     )
     counts_dict = _parse_json(logical_counts, "logical_counts") if logical_counts else None
     overrides_dict = _parse_json(qubit_model_overrides, "qubit_model_overrides") if qubit_model_overrides else None
@@ -137,6 +145,7 @@ def estimate_resources(
         qec_error_correction_threshold=qec_error_correction_threshold,
         qec_logical_cycle_time=qec_logical_cycle_time,
         qec_physical_qubits_per_logical=qec_physical_qubits_per_logical,
+        reaction_time=reaction_time,
     )
 
 
@@ -313,12 +322,16 @@ def custom_qubit_model_estimate(
     idle_error_rate: float = 1e-4,
     qec_scheme: str = "surface_code",
     error_budget: float = 0.001,
+    reaction_time: str | None = None,
 ) -> dict[str, Any]:
     """Estimate resources using fully custom physical qubit parameters.
 
     Use this when modeling novel hardware not covered by the 6 predefined qubit models.
     All gate times accept strings like '50 ns', '1 μs', '100 ms'.
     instruction_set: 'GateBased' (default) or 'Majorana'.
+
+    Optional reaction_time (e.g. '10 us') models classical control system latency.
+    When it exceeds the logical cycle time, it becomes the effective cycle time.
 
     Provide algorithm as exactly one of algorithm_template, logical_counts, or qsharp_code.
     """
@@ -338,6 +351,7 @@ def custom_qubit_model_estimate(
         idle_error_rate=idle_error_rate,
         qec_scheme=qec_scheme,
         error_budget=error_budget,
+        reaction_time=reaction_time,
     )
 
 

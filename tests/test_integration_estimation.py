@@ -72,6 +72,37 @@ def test_shor_2048_with_cycle_time_and_max_qubits_below_required():
 
 
 @pytest.mark.integration
+def test_shor_2048_with_reaction_time():
+    """shor_2048 + reaction_time='10 us' should produce reaction_limited=True.
+
+    With a logical cycle time of ~1 µs and reaction time of 10 µs, the
+    reaction time dominates and the adjusted runtime should be ~10x the original.
+    """
+    t0 = time.monotonic()
+    result = estimate_resources(
+        algorithm_template="shor_2048",
+        qubit_model="qubit_gate_ns_e3",
+        qec_scheme="surface_code",
+        error_budget=0.001,
+        qec_logical_cycle_time="1000 ns",
+        reaction_time="10 us",
+    )
+    elapsed = time.monotonic() - t0
+
+    summary = result["summary"]
+    print(f"\n[shor_2048 + reaction_time=10us] elapsed: {elapsed:.1f}s")
+    print(f"  physical_qubits              : {summary['physical_qubits']}")
+    print(f"  runtime (original)           : {summary['runtime']}")
+    print(f"  reaction_time_adjusted_runtime: {summary.get('reaction_time_adjusted_runtime')}")
+    print(f"  reaction_limited             : {summary.get('reaction_limited')}")
+    print(f"  reaction_time_note           : {summary.get('reaction_time_note')}")
+
+    assert summary["reaction_limited"] is True
+    assert summary["reaction_time_adjusted_runtime"] is not None
+    assert summary["physical_qubits"] > 0
+
+
+@pytest.mark.integration
 def test_shor_2048_baseline_no_overrides():
     """Baseline: shor_2048 with default params (no QEC overrides).
 

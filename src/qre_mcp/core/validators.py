@@ -7,6 +7,7 @@ from qre_mcp.data.qubit_models import (
     GATE_BASED_QUBIT_MODEL_IDS,
     VALID_QUBIT_MODEL_IDS,
 )
+from qre_mcp.core.params import parse_duration_ns
 from qre_mcp.errors import (
     AlgorithmInputError,
     IncompatibleQECSchemeError,
@@ -14,6 +15,7 @@ from qre_mcp.errors import (
     InvalidQECSchemeParamError,
     InvalidQubitModelError,
     InvalidQubitParamOverrideError,
+    InvalidReactionTimeError,
 )
 
 
@@ -130,3 +132,19 @@ def validate_logical_counts(counts: dict) -> None:
         )
     if counts.get("numQubits", 0) <= 0:
         raise AlgorithmInputError("logical_counts['numQubits'] must be a positive integer.")
+
+
+def validate_reaction_time(reaction_time: str) -> float:
+    """Validate and parse a reaction_time string, returning nanoseconds.
+
+    Raises InvalidReactionTimeError for bad format or non-positive values.
+    """
+    try:
+        ns = parse_duration_ns(reaction_time)
+    except ValueError as exc:
+        raise InvalidReactionTimeError(str(exc)) from exc
+    if ns <= 0:
+        raise InvalidReactionTimeError(
+            f"reaction_time must be positive, got '{reaction_time}' ({ns} ns)."
+        )
+    return ns

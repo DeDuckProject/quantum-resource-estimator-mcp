@@ -12,6 +12,7 @@ from qre_mcp.core.validators import (
     validate_error_budget,
     validate_logical_counts,
     validate_qec_scheme_params,
+    validate_reaction_time,
 )
 from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES
 from qre_mcp.data.qec_schemes import QEC_SCHEMES
@@ -33,6 +34,11 @@ _USE_CASE_GUIDANCE: dict[str, dict] = {
             "qubit_model": "Use ns gate-based models (superconducting) for typical projections.",
             "error_budget": "0.001 is standard. Lower values give more conservative estimates.",
             "max_physical_qubits": "Set this to understand minimum hardware scale required.",
+            "reaction_time": (
+                "Classical control system latency. Use reaction_time='10 us' to model "
+                "the Gidney-Ekeraa assumption where the classical reaction time (~10 µs) "
+                "dominates the logical cycle time (~1 µs)."
+            ),
         },
         "typical_results": (
             "Breaking RSA-2048 with Shor's algorithm requires on the order of millions "
@@ -172,12 +178,15 @@ def custom_qubit_model_estimate(
     qec_error_correction_threshold: float | None = None,
     qec_logical_cycle_time: str | None = None,
     qec_physical_qubits_per_logical: str | None = None,
+    reaction_time: str | None = None,
 ) -> dict[str, Any]:
     """Estimate resources using fully custom physical qubit parameters.
 
     Use this when modeling novel hardware that doesn't match any of the 6 predefined
     qubit models. All gate times accept strings like '50 ns', '1 μs', '100 ms'.
     instruction_set must be 'GateBased' or 'Majorana'.
+
+    Optional reaction_time (e.g. '10 us') models classical control system latency.
     """
     validate_algorithm_input(qsharp_code, algorithm_template, logical_counts)
     validate_error_budget(error_budget)
@@ -187,6 +196,10 @@ def custom_qubit_model_estimate(
         qec_crossing_prefactor, qec_error_correction_threshold,
         qec_logical_cycle_time, qec_physical_qubits_per_logical,
     )
+
+    reaction_time_ns: float | None = None
+    if reaction_time is not None:
+        reaction_time_ns = validate_reaction_time(reaction_time)
 
     custom_qubit_params = {
         "instructionSet": instruction_set,
@@ -217,7 +230,7 @@ def custom_qubit_model_estimate(
     }
 
     raw = run_estimation(qsharp_code, algorithm_template, logical_counts, params)
-    return format_single_result(raw)
+    return format_single_result(raw, reaction_time_ns=reaction_time_ns)
 
 
 def _parameter_reference() -> dict[str, Any]:
@@ -272,6 +285,13 @@ def _parameter_reference() -> dict[str, Any]:
             "E.g. '{\"twoQubitGateTime\": \"10 ns\"}' to keep qubit_gate_ns_e3 but change gate time. "
             "Valid keys: oneQubitGateTime, twoQubitGateTime, oneQubitMeasurementTime, "
             "oneQubitGateErrorRate, twoQubitGateErrorRate, tGateErrorRate, readoutErrorRate, idleErrorRate."
+        ),
+        "reaction_time": (
+            "Classical control system reaction time, e.g. '10 us'. When the reaction time "
+            "exceeds the QEC logical cycle time, it becomes the effective cycle time, "
+            "increasing overall runtime. This models the Gidney-Ekeraa scenario where "
+            "classical decoding latency (~10 µs) dominates the logical cycle (~1 µs). "
+            "Only affects runtime — physical qubit count and code distance are unchanged."
         ),
         "custom_qec_scheme": {
             "qec_crossing_prefactor": (
