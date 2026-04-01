@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES, CATEGORY_DESCRIPTIONS
+from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES, CATEGORY_DESCRIPTIONS, _TEMPLATE_DISCLAIMER
 from qre_mcp.data.qec_schemes import QEC_SCHEMES
 from qre_mcp.data.qubit_models import QUBIT_MODELS
 
@@ -63,6 +63,7 @@ def list_algorithm_templates() -> dict:
             "parameters": t.parameters,
             "source": t.source,
             "notes": t.notes,
+            "caveats": list(t.caveats),
         })
 
     by_category: dict[str, list] = {}
@@ -71,6 +72,7 @@ def list_algorithm_templates() -> dict:
         by_category.setdefault(cat, []).append(t)
 
     return {
+        "disclaimer": _TEMPLATE_DISCLAIMER,
         "templates": templates,
         "count": len(templates),
         "categories": {

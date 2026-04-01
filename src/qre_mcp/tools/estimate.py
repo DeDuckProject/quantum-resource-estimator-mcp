@@ -7,6 +7,7 @@ from typing import Any
 from qre_mcp.core.estimator import run_estimation, run_frontier_estimation
 from qre_mcp.core.params import build_params_dict
 from qre_mcp.core.result_formatter import format_frontier_results, format_single_result
+from qre_mcp.data.algorithm_templates import ALGORITHM_TEMPLATES
 from qre_mcp.core.validators import (
     validate_algorithm_input,
     validate_error_budget,
@@ -82,7 +83,17 @@ def estimate_resources(
     )
 
     raw = run_estimation(qsharp_code, algorithm_template, logical_counts, params)
-    return format_single_result(raw)
+
+    template_info = None
+    if algorithm_template is not None and algorithm_template in ALGORITHM_TEMPLATES:
+        t = ALGORITHM_TEMPLATES[algorithm_template]
+        template_info = {
+            "name": t.name,
+            "source": t.source,
+            "caveats": list(t.caveats),
+        }
+
+    return format_single_result(raw, template_info=template_info)
 
 
 def generate_frontier(
