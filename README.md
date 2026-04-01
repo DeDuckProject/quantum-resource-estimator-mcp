@@ -114,6 +114,8 @@ Via an LLM with this MCP server connected:
 | `chemistry_femo` | FeMo-cofactor simulation | Chemistry |
 | `qpe_generic` | Quantum phase estimation | General |
 
+> **Note:** Templates are provided for demonstration and system exploration only. Logical counts are sourced from published research but may not capture significant details. For research-grade estimates, provide your own `logical_counts` sourced directly from primary publications. When using a template, `estimate_resources()` will include a `template_info` field in the response with the source citation and relevant caveats.
+
 ## Logs
 
 The server runs over stdio (MCP protocol), so stdout/stderr are not available for human-readable output. Logs are written to a file you can follow in a separate terminal:

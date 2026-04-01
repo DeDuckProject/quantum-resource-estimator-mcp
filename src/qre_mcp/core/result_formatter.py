@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 
-def format_single_result(raw: dict[str, Any]) -> dict[str, Any]:
+def format_single_result(
+    raw: dict[str, Any],
+    template_info: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Format a single estimation result into a summary + details structure."""
     pf = raw.get("physicalCountsFormatted", {})
     pc = raw.get("physicalCounts", {})
@@ -33,7 +36,10 @@ def format_single_result(raw: dict[str, Any]) -> dict[str, Any]:
         "job_params": jp,
     }
 
-    return {"summary": summary, "details": details}
+    result: dict[str, Any] = {"summary": summary, "details": details}
+    if template_info is not None:
+        result["template_info"] = template_info
+    return result
 
 
 def format_batch_results(raw_list: list[dict[str, Any]], configs: list[dict]) -> dict[str, Any]:
